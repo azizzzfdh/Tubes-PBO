@@ -1,0 +1,296 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f3f4f6;
+  color: #111827;
+}
+
+a {
+  text-decoration: none;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  width: 250px;
+  background: #081735;
+  color: white;
+  padding: 20px;
+  min-height: 100vh;
+}
+
+.sidebar h2,
+.sidebar p {
+  text-align: center;
+}
+
+.sidebar-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 30px;
+}
+
+.sidebar-link {
+  display: block;
+  background: #1a2b4c;
+  color: white;
+  padding: 14px;
+  border-radius: 10px;
+  text-align: center;
+  transition: 0.2s;
+}
+
+.sidebar-link:hover {
+  background: #24385f;
+}
+
+.logout-btn {
+  background: #b22222;
+  color: white;
+  border: none;
+  padding: 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.logout-btn:hover {
+  background: #8f1b1b;
+}
+
+.content {
+  flex: 1;
+  padding: 30px;
+}
+
+.card {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  margin-top: 15px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.form-box {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  max-width: 700px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.form-box label {
+  display: block;
+  margin-top: 12px;
+  margin-bottom: 6px;
+  font-weight: bold;
+}
+
+.form-box input,
+.form-box textarea,
+.form-box select {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+}
+
+.form-box textarea {
+  min-height: 120px;
+}
+
+.form-box button {
+  margin-top: 16px;
+  padding: 12px 18px;
+  border: none;
+  border-radius: 8px;
+  background: #081735;
+  color: white;
+  cursor: pointer;
+}
+
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #eef2f7;
+}
+
+.login-box {
+  background: white;
+  padding: 30px;
+  border-radius: 14px;
+  width: 400px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+.login-box h1,
+.login-box p {
+  text-align: center;
+}
+
+.login-box form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.login-box input {
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+}
+
+.login-box button {
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  background: #081735;
+  color: white;
+  cursor: pointer;
+}
+
+.error-text {
+  color: red;
+  margin-top: 12px;
+}
+
+.success-text {
+  color: green;
+  margin-top: 12px;
+}
+
+.admin-page {
+  padding: 30px;
+  background: #f9fafb;
+  min-height: 100vh;
+}
+
+.admin-header {
+  margin-bottom: 20px;
+}
+
+.admin-header h1 {
+  margin: 0 0 8px 0;
+}
+
+.admin-stats {
+  grid-template-columns: repeat(5, 1fr);
+}
+
+.table-wrapper {
+  background: white;
+  padding: 20px;
+  border-radius: 14px;
+  margin-top: 24px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+  overflow-x: auto;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 16px;
+}
+
+.data-table th,
+.data-table td {
+  border: 1px solid #e5e7eb;
+  padding: 12px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.data-table th {
+  background: #f3f4f6;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.action-buttons button {
+  border: none;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  color: white;
+}
+
+.btn-process {
+  background: #2563eb;
+}
+
+.btn-finish {
+  background: #16a34a;
+}
+
+.btn-reject {
+  background: #dc2626;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.status-menunggu {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status-diproses {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.status-selesai {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.status-ditolak {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+@media (max-width: 1024px) {
+  .stats-grid,
+  .admin-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .layout {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    min-height: auto;
+  }
+}
