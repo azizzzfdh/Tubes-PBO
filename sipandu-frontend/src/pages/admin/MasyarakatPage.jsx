@@ -1,25 +1,65 @@
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import { apiFetch } from "../../services/api";
+import AdminLayout from "../../components/AdminLayout";
 
 function MasyarakatPage() {
   const [masyarakat, setMasyarakat] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const [confirmModal, setConfirmModal] = useState({
+    open: false,
+    title: "",
+    message: "",
+    action: null,
+  });
+
+  const [toast, setToast] = useState({
+    show: false,
+    type: "success",
+    message: "",
+  });
+
+  const [modalLoading, setModalLoading] = useState(false);
+
+  const showToast = (type, message) => {
+    setToast({
+      show: true,
+      type,
+      message,
+    });
+
+    setTimeout(() => {
+      setToast({
+        show: false,
+        type: "success",
+        message: "",
+      });
+    }, 2500);
+  };
+
+  const closeConfirmModal = () => {
+    setConfirmModal({
+      open: false,
+      title: "",
+      message: "",
+      action: null,
+    });
+  };
 
   const fetchMasyarakat = async () => {
     try {
       setLoading(true);
 
       const result = await apiFetch("/masyarakat");
-
-      const dataMasyarakat = Array.isArray(result)
-        ? result
-        : result?.data || [];
+      const dataMasyarakat = Array.isArray(result) ? result : result?.data || [];
 
       setMasyarakat(dataMasyarakat);
     } catch (error) {
       console.error("Gagal mengambil data masyarakat:", error);
-      alert(error.message || "Gagal mengambil data masyarakat dari server");
+      showToast(
+        "error",
+        error.message || "Gagal mengambil data masyarakat dari server"
+      );
     } finally {
       setLoading(false);
     }
@@ -35,92 +75,59 @@ function MasyarakatPage() {
 
   const handleDelete = async (id) => {
     if (!id) {
-      alert("ID masyarakat tidak ditemukan");
+      showToast("error", "ID masyarakat tidak ditemukan");
       return;
     }
 
-    const konfirmasi = window.confirm(
-      "Yakin ingin menghapus data masyarakat ini?"
-    );
+    setConfirmModal({
+      open: true,
+      title: "Hapus Data Masyarakat",
+      message: "Yakin ingin menghapus data masyarakat ini?",
+      action: async () => {
+        try {
+          const result = await apiFetch(`/masyarakat/${id}`, {
+            method: "DELETE",
+          });
 
-    if (!konfirmasi) return;
+          showToast(
+            "success",
+            result?.message || "Data masyarakat berhasil dihapus"
+          );
+
+          fetchMasyarakat();
+        } catch (error) {
+          console.error("Gagal menghapus data masyarakat:", error);
+          showToast(
+            "error",
+            error.message || "Gagal menghapus data masyarakat"
+          );
+        }
+      },
+    });
+  };
+
+  const handleConfirmAction = async () => {
+    if (!confirmModal.action) return;
 
     try {
-      const result = await apiFetch(`/masyarakat/${id}`, {
-        method: "DELETE",
-      });
-
-      alert(result?.message || "Data masyarakat berhasil dihapus");
-
-      fetchMasyarakat();
-    } catch (error) {
-      console.error("Gagal menghapus data masyarakat:", error);
-      alert(error.message || "Gagal menghapus data masyarakat");
+      setModalLoading(true);
+      await confirmModal.action();
+      closeConfirmModal();
+    } finally {
+      setModalLoading(false);
     }
   };
 
   return (
-    <div className="app-layout">
-      <aside className="sidebar sidebar-admin">
-        <div className="sidebar-brand">
-          <div className="logo-box">🏛️</div>
-          <h2>SIPANDU</h2>
-        </div>
-
-        <nav className="sidebar-menu">
-          <Link className="menu-link" to="/admin/dashboard">
-            <span>📊</span> Dashboard
-          </Link>
-
-          <Link className="menu-link" to="/admin/pengaduan">
-            <span>📄</span> Data Pengaduan
-          </Link>
-
-          <Link className="menu-link active" to="/admin/masyarakat">
-            <span>👥</span> Data Masyarakat
-          </Link>
-
-          <Link className="menu-link" to="/admin/kategori">
-            <span>🗂️</span> Kategori Layanan
-          </Link>
-
-          <Link className="menu-link" to="/admin/pelayanan">
-            <span>✅</span> Pelayanan
-          </Link>
-
-          <Link className="menu-link" to="/admin/riwayat">
-            <span>🕒</span> Riwayat Pelayanan
-          </Link>
-
-          <Link className="menu-link" to="/admin/profil">
-            <span>👤</span> Profil Admin
-          </Link>
-
-          <Link className="menu-link logout" to="/login">
-            <span>🚪</span> Logout
-          </Link>
-        </nav>
-      </aside>
-
-      <main className="dashboard-main">
-        <header className="topbar topbar-admin">
-          <div className="topbar-left">
-            <h1>Data Masyarakat</h1>
-            <p>Kelola data warga yang terdaftar pada sistem SIPANDU</p>
-          </div>
-
-          <div className="topbar-right">
-            <div className="user-avatar">A</div>
-            <div className="user-info">
-              <h4>Admin Kecamatan</h4>
-              <p>Administrator</p>
-            </div>
-          </div>
-        </header>
-
-        <section className="stat-row stat-row-user">
+    <>
+      <AdminLayout
+        title="Data Masyarakat"
+        description="Kelola data warga yang terdaftar pada sistem SIPANDU"
+        active="masyarakat"
+      >
+        <section className="stat-row stat-row-admin">
           <div className="stat-card">
-            <div className="stat-icon icon-blue">👥</div>
+            <div className="stat-icon icon-blue">◉</div>
             <div>
               <p>Total Masyarakat</p>
               <h2>{masyarakat.length}</h2>
@@ -129,7 +136,7 @@ function MasyarakatPage() {
           </div>
 
           <div className="stat-card">
-            <div className="stat-icon icon-green">✅</div>
+            <div className="stat-icon icon-green">✓</div>
             <div>
               <p>Status</p>
               <h2>Aktif</h2>
@@ -179,7 +186,9 @@ function MasyarakatPage() {
                           <td>{index + 1}</td>
                           <td>{item?.nama || item?.namaMasyarakat || "-"}</td>
                           <td>{item?.email || "-"}</td>
-                          <td>{item?.noHp || item?.no_hp || item?.noHP || "-"}</td>
+                          <td>
+                            {item?.noHp || item?.no_hp || item?.noHP || "-"}
+                          </td>
                           <td>{item?.alamat || "-"}</td>
                           <td>
                             <div className="action-buttons">
@@ -204,8 +213,44 @@ function MasyarakatPage() {
             </div>
           )}
         </section>
-      </main>
-    </div>
+      </AdminLayout>
+
+      {confirmModal.open && (
+        <div className="custom-modal-overlay">
+          <div className="custom-modal">
+            <div className="modal-icon">!</div>
+
+            <h3>{confirmModal.title}</h3>
+            <p>{confirmModal.message}</p>
+
+            <div className="modal-actions">
+              <button
+                className="modal-btn modal-cancel"
+                onClick={closeConfirmModal}
+                disabled={modalLoading}
+              >
+                Batal
+              </button>
+
+              <button
+                className="modal-btn modal-confirm"
+                onClick={handleConfirmAction}
+                disabled={modalLoading}
+              >
+                {modalLoading ? "Memproses..." : "Ya, Lanjutkan"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {toast.show && (
+        <div className={`custom-toast ${toast.type}`}>
+          <span>{toast.type === "success" ? "✓" : "!"}</span>
+          <p>{toast.message}</p>
+        </div>
+      )}
+    </>
   );
 }
 

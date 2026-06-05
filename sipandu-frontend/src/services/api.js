@@ -66,7 +66,7 @@ export async function updateStatusPengaduan(id, statusPengaduan) {
   return apiFetch(`/pengaduan/${id}/status`, {
     method: "PUT",
     body: JSON.stringify({
-      statusPengaduan: statusPengaduan,
+      status: statusPengaduan,
     }),
   });
 }

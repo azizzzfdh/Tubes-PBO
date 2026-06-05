@@ -1,11 +1,51 @@
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import { apiFetch } from "../../services/api";
+import AdminLayout from "../../components/AdminLayout";
 
 function KategoriPage() {
   const [kategori, setKategori] = useState([]);
   const [loading, setLoading] = useState(true);
   const [namaKategori, setNamaKategori] = useState("");
+
+  const [confirmModal, setConfirmModal] = useState({
+    open: false,
+    title: "",
+    message: "",
+    action: null,
+  });
+
+  const [toast, setToast] = useState({
+    show: false,
+    type: "success",
+    message: "",
+  });
+
+  const [modalLoading, setModalLoading] = useState(false);
+
+  const showToast = (type, message) => {
+    setToast({
+      show: true,
+      type,
+      message,
+    });
+
+    setTimeout(() => {
+      setToast({
+        show: false,
+        type: "success",
+        message: "",
+      });
+    }, 2500);
+  };
+
+  const closeConfirmModal = () => {
+    setConfirmModal({
+      open: false,
+      title: "",
+      message: "",
+      action: null,
+    });
+  };
 
   const fetchKategori = async () => {
     try {
@@ -17,7 +57,7 @@ function KategoriPage() {
       setKategori(dataKategori);
     } catch (error) {
       console.error("Gagal mengambil kategori:", error);
-      alert(error.message || "Gagal mengambil data kategori");
+      showToast("error", error.message || "Gagal mengambil data kategori");
     } finally {
       setLoading(false);
     }
@@ -35,7 +75,7 @@ function KategoriPage() {
     e.preventDefault();
 
     if (!namaKategori.trim()) {
-      alert("Nama kategori wajib diisi");
+      showToast("error", "Nama kategori wajib diisi");
       return;
     }
 
@@ -49,102 +89,65 @@ function KategoriPage() {
         body: JSON.stringify(payload),
       });
 
-      alert(result?.message || "Kategori berhasil ditambahkan");
+      showToast("success", result?.message || "Kategori berhasil ditambahkan");
 
       setNamaKategori("");
       fetchKategori();
     } catch (error) {
       console.error("Gagal tambah kategori:", error);
-      alert(error.message || "Gagal menambahkan kategori");
+      showToast("error", error.message || "Gagal menambahkan kategori");
     }
   };
 
   const handleDelete = async (id) => {
     if (!id) {
-      alert("ID kategori tidak ditemukan");
+      showToast("error", "ID kategori tidak ditemukan");
       return;
     }
 
-    const konfirmasi = window.confirm("Yakin ingin menghapus kategori ini?");
+    setConfirmModal({
+      open: true,
+      title: "Hapus Kategori",
+      message: "Yakin ingin menghapus kategori ini?",
+      action: async () => {
+        try {
+          const result = await apiFetch(`/kategori/${id}`, {
+            method: "DELETE",
+          });
 
-    if (!konfirmasi) return;
+          showToast("success", result?.message || "Kategori berhasil dihapus");
+
+          fetchKategori();
+        } catch (error) {
+          console.error("Gagal hapus kategori:", error);
+          showToast("error", error.message || "Gagal menghapus kategori");
+        }
+      },
+    });
+  };
+
+  const handleConfirmAction = async () => {
+    if (!confirmModal.action) return;
 
     try {
-      const result = await apiFetch(`/kategori/${id}`, {
-        method: "DELETE",
-      });
-
-      alert(result?.message || "Kategori berhasil dihapus");
-
-      fetchKategori();
-    } catch (error) {
-      console.error("Gagal hapus kategori:", error);
-      alert(error.message || "Gagal menghapus kategori");
+      setModalLoading(true);
+      await confirmModal.action();
+      closeConfirmModal();
+    } finally {
+      setModalLoading(false);
     }
   };
 
   return (
-    <div className="app-layout">
-      <aside className="sidebar sidebar-admin">
-        <div className="sidebar-brand">
-          <div className="logo-box">🏛️</div>
-          <h2>SIPANDU</h2>
-        </div>
-
-        <nav className="sidebar-menu">
-          <Link className="menu-link" to="/admin/dashboard">
-            <span>📊</span> Dashboard
-          </Link>
-
-          <Link className="menu-link" to="/admin/pengaduan">
-            <span>📄</span> Data Pengaduan
-          </Link>
-
-          <Link className="menu-link" to="/admin/masyarakat">
-            <span>👥</span> Data Masyarakat
-          </Link>
-
-          <Link className="menu-link active" to="/admin/kategori">
-            <span>🗂️</span> Kategori Layanan
-          </Link>
-
-          <Link className="menu-link" to="/admin/pelayanan">
-            <span>✅</span> Pelayanan
-          </Link>
-
-          <Link className="menu-link" to="/admin/riwayat">
-            <span>🕒</span> Riwayat Pelayanan
-          </Link>
-
-          <Link className="menu-link" to="/admin/profil">
-            <span>👤</span> Profil Admin
-          </Link>
-
-          <Link className="menu-link logout" to="/login">
-            <span>🚪</span> Logout
-          </Link>
-        </nav>
-      </aside>
-
-      <main className="dashboard-main">
-        <header className="topbar topbar-admin">
-          <div className="topbar-left">
-            <h1>Kategori Layanan</h1>
-            <p>Kelola kategori layanan pengaduan warga</p>
-          </div>
-
-          <div className="topbar-right">
-            <div className="user-avatar">A</div>
-            <div className="user-info">
-              <h4>Admin Kecamatan</h4>
-              <p>Administrator</p>
-            </div>
-          </div>
-        </header>
-
-        <section className="stat-row stat-row-user">
+    <>
+      <AdminLayout
+        title="Kategori Layanan"
+        description="Kelola kategori layanan pengaduan warga"
+        active="kategori"
+      >
+        <section className="stat-row stat-row-admin">
           <div className="stat-card">
-            <div className="stat-icon icon-blue">🗂️</div>
+            <div className="stat-icon icon-blue">☷</div>
             <div>
               <p>Total Kategori</p>
               <h2>{kategori.length}</h2>
@@ -213,7 +216,9 @@ function KategoriPage() {
                       return (
                         <tr key={idKategori || index}>
                           <td>{index + 1}</td>
-                          <td>{item?.namaKategori || item?.nama_kategori || "-"}</td>
+                          <td>
+                            {item?.namaKategori || item?.nama_kategori || "-"}
+                          </td>
                           <td>
                             <div className="action-buttons">
                               <button
@@ -233,8 +238,44 @@ function KategoriPage() {
             </div>
           )}
         </section>
-      </main>
-    </div>
+      </AdminLayout>
+
+      {confirmModal.open && (
+        <div className="custom-modal-overlay">
+          <div className="custom-modal">
+            <div className="modal-icon">!</div>
+
+            <h3>{confirmModal.title}</h3>
+            <p>{confirmModal.message}</p>
+
+            <div className="modal-actions">
+              <button
+                className="modal-btn modal-cancel"
+                onClick={closeConfirmModal}
+                disabled={modalLoading}
+              >
+                Batal
+              </button>
+
+              <button
+                className="modal-btn modal-confirm"
+                onClick={handleConfirmAction}
+                disabled={modalLoading}
+              >
+                {modalLoading ? "Memproses..." : "Ya, Lanjutkan"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {toast.show && (
+        <div className={`custom-toast ${toast.type}`}>
+          <span>{toast.type === "success" ? "✓" : "!"}</span>
+          <p>{toast.message}</p>
+        </div>
+      )}
+    </>
   );
 }
 

@@ -1,36 +1,69 @@
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import {
   getAllPengaduan,
   updateStatusPengaduan,
   deletePengaduan,
 } from "../../services/api";
+import AdminLayout from "../../components/AdminLayout";
 
 function DashboardAdmin() {
   const [pengaduan, setPengaduan] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const [confirmModal, setConfirmModal] = useState({
+    open: false,
+    title: "",
+    message: "",
+    action: null,
+  });
+
+  const [toast, setToast] = useState({
+    show: false,
+    type: "success",
+    message: "",
+  });
+
+  const [modalLoading, setModalLoading] = useState(false);
+
+  const showToast = (type, message) => {
+    setToast({
+      show: true,
+      type,
+      message,
+    });
+
+    setTimeout(() => {
+      setToast({
+        show: false,
+        type: "success",
+        message: "",
+      });
+    }, 2500);
+  };
+
+  const closeConfirmModal = () => {
+    setConfirmModal({
+      open: false,
+      title: "",
+      message: "",
+      action: null,
+    });
+  };
 
   const fetchPengaduan = async () => {
     try {
       setLoading(true);
 
       const result = await getAllPengaduan();
-
-      /*
-        Backend kamu mengembalikan ApiResponse:
-        {
-          message: "...",
-          data: [...]
-        }
-
-        Jadi data pengaduan harus diambil dari result.data.
-      */
       const dataPengaduan = Array.isArray(result) ? result : result?.data || [];
 
       setPengaduan(dataPengaduan);
     } catch (error) {
       console.error("Gagal mengambil data pengaduan:", error);
-      alert(error.message || "Gagal mengambil data pengaduan dari server");
+      showToast(
+        "error",
+        error.message || "Gagal mengambil data pengaduan dari server"
+      );
     } finally {
       setLoading(false);
     }
@@ -68,52 +101,6 @@ function DashboardAdmin() {
     );
   };
 
-  const handleUpdateStatus = async (id, status) => {
-    if (!id) {
-      alert("ID pengaduan tidak ditemukan");
-      return;
-    }
-
-    const konfirmasi = window.confirm(
-      `Yakin ingin mengubah status pengaduan menjadi ${status}?`
-    );
-
-    if (!konfirmasi) return;
-
-    try {
-      const result = await updateStatusPengaduan(id, status);
-
-      alert(result?.message || "Status pengaduan berhasil diperbarui");
-
-      fetchPengaduan();
-    } catch (error) {
-      console.error("Gagal update status:", error);
-      alert(error.message || "Gagal mengubah status pengaduan");
-    }
-  };
-
-  const handleDelete = async (id) => {
-    if (!id) {
-      alert("ID pengaduan tidak ditemukan");
-      return;
-    }
-
-    const konfirmasi = window.confirm("Yakin ingin menghapus pengaduan ini?");
-
-    if (!konfirmasi) return;
-
-    try {
-      const result = await deletePengaduan(id);
-
-      alert(result?.message || "Pengaduan berhasil dihapus");
-
-      fetchPengaduan();
-    } catch (error) {
-      console.error("Gagal hapus pengaduan:", error);
-      alert(error.message || "Gagal menghapus pengaduan");
-    }
-  };
-
   const badgeClass = (status) => {
     if (status === "MENUNGGU") return "badge badge-yellow";
     if (status === "DIPROSES") return "badge badge-blue";
@@ -144,6 +131,76 @@ function DashboardAdmin() {
     }
   };
 
+  const handleUpdateStatus = async (id, status) => {
+    if (!id) {
+      showToast("error", "ID pengaduan tidak ditemukan");
+      return;
+    }
+
+    setConfirmModal({
+      open: true,
+      title: "Ubah Status Pengaduan",
+      message: `Yakin ingin mengubah status pengaduan menjadi ${formatStatus(
+        status
+      )}?`,
+      action: async () => {
+        try {
+          const result = await updateStatusPengaduan(id, status);
+
+          showToast(
+            "success",
+            result?.message || "Status pengaduan berhasil diperbarui"
+          );
+
+          fetchPengaduan();
+        } catch (error) {
+          console.error("Gagal update status:", error);
+          showToast("error", error.message || "Gagal mengubah status");
+        }
+      },
+    });
+  };
+
+  const handleDelete = async (id) => {
+    if (!id) {
+      showToast("error", "ID pengaduan tidak ditemukan");
+      return;
+    }
+
+    setConfirmModal({
+      open: true,
+      title: "Hapus Pengaduan",
+      message: "Yakin ingin menghapus pengaduan ini?",
+      action: async () => {
+        try {
+          const result = await deletePengaduan(id);
+
+          showToast(
+            "success",
+            result?.message || "Pengaduan berhasil dihapus"
+          );
+
+          fetchPengaduan();
+        } catch (error) {
+          console.error("Gagal hapus pengaduan:", error);
+          showToast("error", error.message || "Gagal menghapus pengaduan");
+        }
+      },
+    });
+  };
+
+  const handleConfirmAction = async () => {
+    if (!confirmModal.action) return;
+
+    try {
+      setModalLoading(true);
+      await confirmModal.action();
+      closeConfirmModal();
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
   const total = pengaduan.length;
 
   const menunggu = pengaduan.filter(
@@ -163,73 +220,15 @@ function DashboardAdmin() {
   ).length;
 
   return (
-    <div className="app-layout">
-      <aside className="sidebar sidebar-admin">
-  <div className="sidebar-brand">
-    <div className="logo-box">🏛️</div>
-    <h2>SIPANDU</h2>
-  </div>
-
-  <nav className="sidebar-menu">
-    <Link className="menu-link active" to="/admin/dashboard">
-      <span>📊</span> Dashboard
-    </Link>
-
-    <Link className="menu-link" to="/admin/pengaduan">
-      <span>📄</span> Data Pengaduan
-    </Link>
-
-    <Link className="menu-link" to="/admin/masyarakat">
-      <span>👥</span> Data Masyarakat
-    </Link>
-
-    <Link className="menu-link" to="/admin/kategori">
-      <span>🗂️</span> Kategori Layanan
-    </Link>
-
-    <Link className="menu-link" to="/admin/pelayanan">
-      <span>✅</span> Pelayanan
-    </Link>
-
-    <Link className="menu-link" to="/admin/riwayat">
-      <span>🕒</span> Riwayat Pelayanan
-    </Link>
-
-    <Link className="menu-link" to="/admin/profil">
-      <span>👤</span> Profil Admin
-    </Link>
-
-    <Link className="menu-link logout" to="/login">
-      <span>🚪</span> Logout
-    </Link>
-  </nav>
-</aside>
-
-      <main className="dashboard-main">
-        <header className="topbar topbar-admin">
-          <div className="topbar-left">
-            <h1>Dashboard Admin</h1>
-            <p>Kelola pengaduan dan layanan administrasi warga</p>
-          </div>
-
-          <div className="topbar-right">
-            <div className="notif">
-              🔔
-              <span>{menunggu}</span>
-            </div>
-
-            <div className="user-avatar">A</div>
-
-            <div className="user-info">
-              <h4>Admin Kecamatan</h4>
-              <p>Administrator</p>
-            </div>
-          </div>
-        </header>
-
+    <>
+      <AdminLayout
+        title="Dashboard Admin"
+        description="Kelola pengaduan dan layanan administrasi warga"
+        active="dashboard"
+      >
         <section className="stat-row stat-row-admin">
           <div className="stat-card">
-            <div className="stat-icon icon-blue">📄</div>
+            <div className="stat-icon icon-blue">▤</div>
             <div>
               <p>Total Pengaduan</p>
               <h2>{total}</h2>
@@ -238,7 +237,7 @@ function DashboardAdmin() {
           </div>
 
           <div className="stat-card">
-            <div className="stat-icon icon-yellow">⏳</div>
+            <div className="stat-icon icon-yellow">◔</div>
             <div>
               <p>Menunggu</p>
               <h2>{menunggu}</h2>
@@ -247,7 +246,7 @@ function DashboardAdmin() {
           </div>
 
           <div className="stat-card">
-            <div className="stat-icon icon-blue">⚙️</div>
+            <div className="stat-icon icon-blue">⚙</div>
             <div>
               <p>Diproses</p>
               <h2>{diproses}</h2>
@@ -256,7 +255,7 @@ function DashboardAdmin() {
           </div>
 
           <div className="stat-card">
-            <div className="stat-icon icon-green">✅</div>
+            <div className="stat-icon icon-green">✓</div>
             <div>
               <p>Selesai</p>
               <h2>{selesai}</h2>
@@ -265,7 +264,7 @@ function DashboardAdmin() {
           </div>
 
           <div className="stat-card">
-            <div className="stat-icon icon-red">✕</div>
+            <div className="stat-icon icon-red">×</div>
             <div>
               <p>Ditolak</p>
               <h2>{ditolak}</h2>
@@ -276,7 +275,7 @@ function DashboardAdmin() {
 
         <section className="card">
           <div className="card-header">
-            <h2>Data Pengaduan</h2>
+            <h2>Data Pengaduan Terbaru</h2>
 
             <button className="btn-outline" onClick={fetchPengaduan}>
               Refresh
@@ -316,15 +315,10 @@ function DashboardAdmin() {
                       return (
                         <tr key={idPengaduan || index}>
                           <td>{index + 1}</td>
-
                           <td>{getNamaWarga(item)}</td>
-
                           <td>{getKategori(item)}</td>
-
                           <td>{item?.judul || "-"}</td>
-
                           <td>{item?.isiPengaduan || item?.isi || "-"}</td>
-
                           <td>
                             {formatTanggal(
                               item?.createdAt ||
@@ -333,13 +327,11 @@ function DashboardAdmin() {
                                 item?.created_at
                             )}
                           </td>
-
                           <td>
                             <span className={badgeClass(status)}>
                               {formatStatus(status)}
                             </span>
                           </td>
-
                           <td>
                             <div className="action-buttons">
                               <button
@@ -389,8 +381,44 @@ function DashboardAdmin() {
             </div>
           )}
         </section>
-      </main>
-    </div>
+      </AdminLayout>
+
+      {confirmModal.open && (
+        <div className="custom-modal-overlay">
+          <div className="custom-modal">
+            <div className="modal-icon">!</div>
+
+            <h3>{confirmModal.title}</h3>
+            <p>{confirmModal.message}</p>
+
+            <div className="modal-actions">
+              <button
+                className="modal-btn modal-cancel"
+                onClick={closeConfirmModal}
+                disabled={modalLoading}
+              >
+                Batal
+              </button>
+
+              <button
+                className="modal-btn modal-confirm"
+                onClick={handleConfirmAction}
+                disabled={modalLoading}
+              >
+                {modalLoading ? "Memproses..." : "Ya, Lanjutkan"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {toast.show && (
+        <div className={`custom-toast ${toast.type}`}>
+          <span>{toast.type === "success" ? "✓" : "!"}</span>
+          <p>{toast.message}</p>
+        </div>
+      )}
+    </>
   );
 }
 

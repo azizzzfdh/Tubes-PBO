@@ -1,14 +1,54 @@
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import {
   getAllPengaduan,
   updateStatusPengaduan,
   deletePengaduan,
 } from "../../services/api";
+import AdminLayout from "../../components/AdminLayout";
 
 function PengaduanAdmin() {
   const [pengaduan, setPengaduan] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const [confirmModal, setConfirmModal] = useState({
+    open: false,
+    title: "",
+    message: "",
+    action: null,
+  });
+
+  const [toast, setToast] = useState({
+    show: false,
+    type: "success",
+    message: "",
+  });
+
+  const [modalLoading, setModalLoading] = useState(false);
+
+  const showToast = (type, message) => {
+    setToast({
+      show: true,
+      type,
+      message,
+    });
+
+    setTimeout(() => {
+      setToast({
+        show: false,
+        type: "success",
+        message: "",
+      });
+    }, 2500);
+  };
+
+  const closeConfirmModal = () => {
+    setConfirmModal({
+      open: false,
+      title: "",
+      message: "",
+      action: null,
+    });
+  };
 
   const fetchPengaduan = async () => {
     try {
@@ -20,7 +60,7 @@ function PengaduanAdmin() {
       setPengaduan(dataPengaduan);
     } catch (error) {
       console.error("Gagal mengambil data pengaduan:", error);
-      alert(error.message || "Gagal mengambil data pengaduan");
+      showToast("error", error.message || "Gagal mengambil data pengaduan");
     } finally {
       setLoading(false);
     }
@@ -90,105 +130,81 @@ function PengaduanAdmin() {
 
   const handleUpdateStatus = async (id, status) => {
     if (!id) {
-      alert("ID pengaduan tidak ditemukan");
+      showToast("error", "ID pengaduan tidak ditemukan");
       return;
     }
 
-    const konfirmasi = window.confirm(
-      `Yakin ingin mengubah status menjadi ${status}?`
-    );
+    setConfirmModal({
+      open: true,
+      title: "Ubah Status Pengaduan",
+      message: `Yakin ingin mengubah status pengaduan menjadi ${formatStatus(
+        status
+      )}?`,
+      action: async () => {
+        try {
+          const result = await updateStatusPengaduan(id, status);
 
-    if (!konfirmasi) return;
+          showToast(
+            "success",
+            result?.message || "Status pengaduan berhasil diperbarui"
+          );
 
-    try {
-      const result = await updateStatusPengaduan(id, status);
-      alert(result?.message || "Status berhasil diperbarui");
-      fetchPengaduan();
-    } catch (error) {
-      console.error("Gagal update status:", error);
-      alert(error.message || "Gagal mengubah status");
-    }
+          fetchPengaduan();
+        } catch (error) {
+          console.error("Gagal update status:", error);
+          showToast("error", error.message || "Gagal mengubah status");
+        }
+      },
+    });
   };
 
   const handleDelete = async (id) => {
     if (!id) {
-      alert("ID pengaduan tidak ditemukan");
+      showToast("error", "ID pengaduan tidak ditemukan");
       return;
     }
 
-    const konfirmasi = window.confirm("Yakin ingin menghapus pengaduan ini?");
+    setConfirmModal({
+      open: true,
+      title: "Hapus Pengaduan",
+      message: "Yakin ingin menghapus pengaduan ini?",
+      action: async () => {
+        try {
+          const result = await deletePengaduan(id);
 
-    if (!konfirmasi) return;
+          showToast(
+            "success",
+            result?.message || "Pengaduan berhasil dihapus"
+          );
+
+          fetchPengaduan();
+        } catch (error) {
+          console.error("Gagal hapus pengaduan:", error);
+          showToast("error", error.message || "Gagal menghapus pengaduan");
+        }
+      },
+    });
+  };
+
+  const handleConfirmAction = async () => {
+    if (!confirmModal.action) return;
 
     try {
-      const result = await deletePengaduan(id);
-      alert(result?.message || "Pengaduan berhasil dihapus");
-      fetchPengaduan();
-    } catch (error) {
-      console.error("Gagal hapus pengaduan:", error);
-      alert(error.message || "Gagal menghapus pengaduan");
+      setModalLoading(true);
+      await confirmModal.action();
+      closeConfirmModal();
+    } finally {
+      setModalLoading(false);
     }
   };
 
   return (
-    <div className="app-layout">
-      <aside className="sidebar sidebar-admin">
-        <div className="sidebar-brand">
-          <div className="logo-box">🏛️</div>
-          <h2>SIPANDU</h2>
-        </div>
-
-        <nav className="sidebar-menu">
-          <Link className="menu-link" to="/admin/dashboard">
-            <span>📊</span> Dashboard
-          </Link>
-
-          <Link className="menu-link active" to="/admin/pengaduan">
-            <span>📄</span> Data Pengaduan
-          </Link>
-
-          <Link className="menu-link" to="/admin/masyarakat">
-            <span>👥</span> Data Masyarakat
-          </Link>
-
-          <Link className="menu-link" to="/admin/kategori">
-            <span>🗂️</span> Kategori Layanan
-          </Link>
-
-          <Link className="menu-link" to="/admin/pelayanan">
-            <span>✅</span> Pelayanan
-          </Link>
-
-          <Link className="menu-link" to="/admin/riwayat">
-            <span>🕒</span> Riwayat Pelayanan
-          </Link>
-
-          <Link className="menu-link" to="/admin/profil">
-            <span>👤</span> Profil Admin
-          </Link>
-
-          <Link className="menu-link logout" to="/login">
-            <span>🚪</span> Logout
-          </Link>
-        </nav>
-      </aside>
-
-      <main className="dashboard-main">
-        <header className="topbar topbar-admin">
-          <div className="topbar-left">
-            <h1>Data Pengaduan</h1>
-            <p>Kelola seluruh data pengaduan warga</p>
-          </div>
-
-          <div className="topbar-right">
-            <div className="user-avatar">A</div>
-            <div className="user-info">
-              <h4>Admin Kecamatan</h4>
-              <p>Administrator</p>
-            </div>
-          </div>
-        </header>
-
+    <>
+      <AdminLayout
+        title="Data Pengaduan"
+        description="Kelola seluruh data pengaduan warga"
+        active="pengaduan"
+      >
         <section className="card">
           <div className="card-header">
             <h2>Daftar Pengaduan Warga</h2>
@@ -297,8 +313,44 @@ function PengaduanAdmin() {
             </div>
           )}
         </section>
-      </main>
-    </div>
+      </AdminLayout>
+
+      {confirmModal.open && (
+        <div className="custom-modal-overlay">
+          <div className="custom-modal">
+            <div className="modal-icon">!</div>
+
+            <h3>{confirmModal.title}</h3>
+            <p>{confirmModal.message}</p>
+
+            <div className="modal-actions">
+              <button
+                className="modal-btn modal-cancel"
+                onClick={closeConfirmModal}
+                disabled={modalLoading}
+              >
+                Batal
+              </button>
+
+              <button
+                className="modal-btn modal-confirm"
+                onClick={handleConfirmAction}
+                disabled={modalLoading}
+              >
+                {modalLoading ? "Memproses..." : "Ya, Lanjutkan"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {toast.show && (
+        <div className={`custom-toast ${toast.type}`}>
+          <span>{toast.type === "success" ? "✓" : "!"}</span>
+          <p>{toast.message}</p>
+        </div>
+      )}
+    </>
   );
 }
 

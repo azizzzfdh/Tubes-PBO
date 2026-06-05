@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import { apiFetch } from "../../services/api";
+import AdminLayout from "../../components/AdminLayout";
 
 function PelayananPage() {
   const [pelayanan, setPelayanan] = useState([]);
@@ -16,29 +16,65 @@ function PelayananPage() {
     tanggalProses: "",
   });
 
+  const [confirmModal, setConfirmModal] = useState({
+    open: false,
+    title: "",
+    message: "",
+    action: null,
+  });
+
+  const [toast, setToast] = useState({
+    show: false,
+    type: "success",
+    message: "",
+  });
+
+  const [modalLoading, setModalLoading] = useState(false);
+
+  const showToast = (type, message) => {
+    setToast({
+      show: true,
+      type,
+      message,
+    });
+
+    setTimeout(() => {
+      setToast({
+        show: false,
+        type: "success",
+        message: "",
+      });
+    }, 2500);
+  };
+
+  const closeConfirmModal = () => {
+    setConfirmModal({
+      open: false,
+      title: "",
+      message: "",
+      action: null,
+    });
+  };
+
   const fetchPelayanan = async () => {
-  try {
-    setLoading(true);
+    try {
+      setLoading(true);
 
-    const result = await apiFetch("/pelayanan");
+      const result = await apiFetch("/pelayanan");
+      const dataPelayanan = Array.isArray(result) ? result : result?.data || [];
 
-    const dataPelayanan = Array.isArray(result) ? result : result?.data || [];
-
-    setPelayanan(dataPelayanan);
-  } catch (error) {
-    console.error("Gagal mengambil data pelayanan:", error);
-
-    // Supaya halaman tetap terbuka walaupun endpoint belum ada
-    setPelayanan([]);
-  } finally {
-    setLoading(false);
-  }
-};
+      setPelayanan(dataPelayanan);
+    } catch (error) {
+      console.error("Gagal mengambil data pelayanan:", error);
+      setPelayanan([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchPengaduan = async () => {
     try {
       const result = await apiFetch("/pengaduan");
-
       const dataPengaduan = Array.isArray(result) ? result : result?.data || [];
 
       setPengaduanList(dataPengaduan);
@@ -61,12 +97,7 @@ function PelayananPage() {
   };
 
   const getJudulPengaduan = (item) => {
-    return (
-      item?.judulPengaduan ||
-      item?.pengaduan?.judul ||
-      item?.judul ||
-      "-"
-    );
+    return item?.judulPengaduan || item?.pengaduan?.judul || item?.judul || "-";
   };
 
   const getNamaWarga = (item) => {
@@ -129,135 +160,104 @@ function PelayananPage() {
     e.preventDefault();
 
     if (!form.idPengaduan) {
-      alert("Pengaduan wajib dipilih");
+      showToast("error", "Pengaduan wajib dipilih");
       return;
     }
 
     if (!form.keterangan.trim()) {
-      alert("Keterangan pelayanan wajib diisi");
+      showToast("error", "Keterangan pelayanan wajib diisi");
       return;
     }
 
     try {
       const payload = {
-  idPengaduan: Number(form.idPengaduan),
-  idAdmin: 1,
-  keterangan: form.keterangan.trim(),
-  statusPelayanan: form.statusPelayanan,
-};
+        idPengaduan: Number(form.idPengaduan),
+        idAdmin: 1,
+        keterangan: form.keterangan.trim(),
+        statusPelayanan: form.statusPelayanan,
+      };
 
       const result = await apiFetch("/pelayanan", {
         method: "POST",
         body: JSON.stringify(payload),
       });
 
-      alert(result?.message || "Data pelayanan berhasil ditambahkan");
+      showToast(
+        "success",
+        result?.message || "Data pelayanan berhasil ditambahkan"
+      );
 
       resetForm();
       setShowForm(false);
       fetchPelayanan();
     } catch (error) {
       console.error("Gagal menambahkan pelayanan:", error);
-      alert(error.message || "Gagal menambahkan pelayanan");
+      showToast("error", error.message || "Gagal menambahkan pelayanan");
     }
   };
 
   const handleDelete = async (id) => {
     if (!id) {
-      alert("ID pelayanan tidak ditemukan");
+      showToast("error", "ID pelayanan tidak ditemukan");
       return;
     }
 
-    const konfirmasi = window.confirm(
-      "Yakin ingin menghapus data pelayanan ini?"
-    );
+    setConfirmModal({
+      open: true,
+      title: "Hapus Data Pelayanan",
+      message: "Yakin ingin menghapus data pelayanan ini?",
+      action: async () => {
+        try {
+          const result = await apiFetch(`/pelayanan/${id}`, {
+            method: "DELETE",
+          });
 
-    if (!konfirmasi) return;
+          showToast(
+            "success",
+            result?.message || "Data pelayanan berhasil dihapus"
+          );
+
+          fetchPelayanan();
+        } catch (error) {
+          console.error("Gagal menghapus pelayanan:", error);
+          showToast("error", error.message || "Gagal menghapus pelayanan");
+        }
+      },
+    });
+  };
+
+  const handleConfirmAction = async () => {
+    if (!confirmModal.action) return;
 
     try {
-      const result = await apiFetch(`/pelayanan/${id}`, {
-        method: "DELETE",
-      });
-
-      alert(result?.message || "Data pelayanan berhasil dihapus");
-
-      fetchPelayanan();
-    } catch (error) {
-      console.error("Gagal menghapus pelayanan:", error);
-      alert(error.message || "Gagal menghapus pelayanan");
+      setModalLoading(true);
+      await confirmModal.action();
+      closeConfirmModal();
+    } finally {
+      setModalLoading(false);
     }
   };
 
   const total = pelayanan.length;
+
   const diproses = pelayanan.filter(
     (item) => getStatus(item) === "DIPROSES"
   ).length;
+
   const selesai = pelayanan.filter(
     (item) => getStatus(item) === "SELESAI"
   ).length;
 
   return (
-    <div className="app-layout">
-      <aside className="sidebar sidebar-admin">
-        <div className="sidebar-brand">
-          <div className="logo-box">🏛️</div>
-          <h2>SIPANDU</h2>
-        </div>
-
-        <nav className="sidebar-menu">
-          <Link className="menu-link" to="/admin/dashboard">
-            <span>📊</span> Dashboard
-          </Link>
-
-          <Link className="menu-link" to="/admin/pengaduan">
-            <span>📄</span> Data Pengaduan
-          </Link>
-
-          <Link className="menu-link" to="/admin/masyarakat">
-            <span>👥</span> Data Masyarakat
-          </Link>
-
-          <Link className="menu-link" to="/admin/kategori">
-            <span>🗂️</span> Kategori Layanan
-          </Link>
-
-          <Link className="menu-link active" to="/admin/pelayanan">
-            <span>✅</span> Pelayanan
-          </Link>
-
-          <Link className="menu-link" to="/admin/riwayat">
-            <span>🕒</span> Riwayat Pelayanan
-          </Link>
-
-          <Link className="menu-link" to="/admin/profil">
-            <span>👤</span> Profil Admin
-          </Link>
-
-          <Link className="menu-link logout" to="/login">
-            <span>🚪</span> Logout
-          </Link>
-        </nav>
-      </aside>
-
-      <main className="dashboard-main">
-        <header className="topbar topbar-admin">
-          <div className="topbar-left">
-            <h1>Data Pelayanan</h1>
-            <p>Kelola tindak lanjut pelayanan dari pengaduan warga</p>
-          </div>
-
-          <div className="topbar-right">
-            <div className="user-avatar">A</div>
-            <div className="user-info">
-              <h4>Admin Kecamatan</h4>
-              <p>Administrator</p>
-            </div>
-          </div>
-        </header>
-
-        <section className="stat-row stat-row-user">
+    <>
+      <AdminLayout
+        title="Data Pelayanan"
+        description="Kelola tindak lanjut pelayanan dari pengaduan warga"
+        active="pelayanan"
+      >
+        <section className="stat-row stat-row-admin">
           <div className="stat-card">
-            <div className="stat-icon icon-blue">✅</div>
+            <div className="stat-icon icon-blue">✓</div>
             <div>
               <p>Total Pelayanan</p>
               <h2>{total}</h2>
@@ -266,7 +266,7 @@ function PelayananPage() {
           </div>
 
           <div className="stat-card">
-            <div className="stat-icon icon-yellow">⚙️</div>
+            <div className="stat-icon icon-yellow">⚙</div>
             <div>
               <p>Diproses</p>
               <h2>{diproses}</h2>
@@ -275,7 +275,7 @@ function PelayananPage() {
           </div>
 
           <div className="stat-card">
-            <div className="stat-icon icon-green">✅</div>
+            <div className="stat-icon icon-green">✓</div>
             <div>
               <p>Selesai</p>
               <h2>{selesai}</h2>
@@ -446,8 +446,44 @@ function PelayananPage() {
             </div>
           )}
         </section>
-      </main>
-    </div>
+      </AdminLayout>
+
+      {confirmModal.open && (
+        <div className="custom-modal-overlay">
+          <div className="custom-modal">
+            <div className="modal-icon">!</div>
+
+            <h3>{confirmModal.title}</h3>
+            <p>{confirmModal.message}</p>
+
+            <div className="modal-actions">
+              <button
+                className="modal-btn modal-cancel"
+                onClick={closeConfirmModal}
+                disabled={modalLoading}
+              >
+                Batal
+              </button>
+
+              <button
+                className="modal-btn modal-confirm"
+                onClick={handleConfirmAction}
+                disabled={modalLoading}
+              >
+                {modalLoading ? "Memproses..." : "Ya, Lanjutkan"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {toast.show && (
+        <div className={`custom-toast ${toast.type}`}>
+          <span>{toast.type === "success" ? "✓" : "!"}</span>
+          <p>{toast.message}</p>
+        </div>
+      )}
+    </>
   );
 }
 
