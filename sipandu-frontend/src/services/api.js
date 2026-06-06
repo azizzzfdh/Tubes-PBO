@@ -1,6 +1,15 @@
 const LOCAL_API_URL = "http://localhost:8080/api";
 const RAILWAY_API_URL = "https://tubes-pbo-production-ba64.up.railway.app/api";
 
+const BASE_URL =
+  import.meta.env.VITE_API_URL?.trim() ||
+  (window.location.hostname === "localhost" ||
+  window.location.hostname === "127.0.0.1"
+    ? LOCAL_API_URL
+    : RAILWAY_API_URL);
+
+console.log("API BASE URL:", BASE_URL);
+
 export default BASE_URL;
 
 export async function apiFetch(endpoint, options = {}) {
