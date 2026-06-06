@@ -1,4 +1,5 @@
-const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080/api";
+const LOCAL_API_URL = "http://localhost:8080/api";
+const RAILWAY_API_URL = "https://tubes-pbo-production-ba64.up.railway.app/api";
 
 export default BASE_URL;
 
